@@ -14,15 +14,6 @@ class ActionSpace:
                 if matrix[i, j] == 0:
                     self.space.add((i, j))
 
-    def __contains__(self, action):
-        return True if action in self.space else False
-
-    def __len__(self):
-        return len(self.space)
-
-    def remove(self, action):
-        self.space.remove(action)
-
     def sample(self):
         return random.sample(self.space, 1)[0]
 
@@ -43,7 +34,7 @@ class Environment:
         print(self.matrix)
 
     def check_done(self):
-        if len(self.action_space) == 0:
+        if 0 not in self.matrix:
             self.done = True
             return True
 
@@ -72,17 +63,20 @@ class Environment:
             self.done = True
             return True
 
+        return False
+
     def step(self, action):
         if self.done:
             raise Exception('Terminal state, no actions possible')
-        if action not in self.action_space:
-            raise Exception('Action is not allowed')
-        self.matrix[action[0], action[1]] = self.current_player
-        self.action_space.remove(action)
-        self.check_done()
-        self.current_player = 2 if self.current_player == 1 else 1
+        if self.matrix[action[0], action[1]] != 0:
+            reward = -5
+
+        else:
+            self.matrix[action[0], action[1]] = self.current_player
+            self.check_done()
+            reward = 1 if self.done and 0 in self.matrix else 0
+            self.current_player = 2 if self.current_player == 1 else 1
         observation = [item for sublist in self.matrix.tolist() for item in sublist]
-        reward = 1 if self.done and len(self.action_space) > 0 else -1
         done = self.done
         info = 0
         return observation, reward, done, info
