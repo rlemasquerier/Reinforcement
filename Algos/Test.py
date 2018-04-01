@@ -2,6 +2,7 @@ import DomainTicTacToe
 import StateTicTacToe
 import EnvironmentTicTacToe
 import QLearning
+import QLearningTicTac
 
 
 def rollout(policy, environement):
@@ -28,6 +29,7 @@ def render_episode(episode):
         print 'State : '
         print episode[i][1][0].matrix
 
+
 class PolicyGreedyTwoPlayer(QLearning.PolicyQValue):
     def __init__(self, algo):
         self.algo = algo
@@ -49,16 +51,16 @@ domainTicTac = DomainTicTacToe.DomainTicTacToe()
 environementTicTacToe = EnvironmentTicTacToe.EnvironmentTicTacToe(domainTicTac, initial_state=initialState)
 
 def v(s, a):
-    return -2
+    return 2.
 
-algo = QLearning.QLearning(domain=domainTicTac,
-                           gamma=1.,
-                           qinit=v,
-                           learningRate=0.1,
-                           epsilon=0.1)
+algo = QLearningTicTac.QLearningTicTac(domain=domainTicTac,
+                                       gamma=1.,
+                                       qinit=v,
+                                       learningRate=0.1,
+                                       epsilon=0.1)
 
 from tqdm import tqdm
-for i in tqdm(range(1000000)):
+for i in tqdm(range(100000)):
     algo.run_learning_episode(environment=environementTicTacToe, maxSteps=10)
     environementTicTacToe = EnvironmentTicTacToe.EnvironmentTicTacToe(domainTicTac, initial_state=initialState)
 
@@ -70,7 +72,7 @@ render_episode(episode)
 # Play against the IA...
 environementTicTacToe = EnvironmentTicTacToe.EnvironmentTicTacToe(domainTicTac,
                                                                   initial_state=initialState)
-player_human = 2
+player_human = 1 # You play first, or 2 : you play second
 cur_state = environementTicTacToe.current_observation()
 while not environementTicTacToe.is_terminal():
     if player_human == cur_state.current_player:
@@ -93,6 +95,7 @@ while not environementTicTacToe.is_terminal():
     cur_state, reward, done, info = environementTicTacToe.execute_action(action)
     if done:
         print "Game finished ", info
+        print cur_state.matrix
 
 
 
