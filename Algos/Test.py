@@ -3,6 +3,7 @@ import StateTicTacToe
 import EnvironmentTicTacToe
 import QLearning
 import QLearningTicTac
+import SaveBrutalPolicy
 
 
 def rollout(policy, environement):
@@ -37,13 +38,13 @@ class PolicyGreedyTwoPlayer(QLearning.PolicyQValue):
     def action(self, state):
         qvalues = self.algo.q_values(state)
         if state.current_player == 1:
-            print "player 1"
-            print qvalues
-            return max(qvalues, key=lambda x: qvalues[x])
+            if len(qvalues) > 0:
+                return max(qvalues, key=lambda x: qvalues[x])
+            return None
         else:
-            print "player 2"
-            print qvalues
-            return min(qvalues, key=lambda x: qvalues[x])
+            if len(qvalues) > 0:
+                return min(qvalues, key=lambda x: qvalues[x])
+            return None
 
 
 initialState = StateTicTacToe.StateTicTacToe()
@@ -58,20 +59,22 @@ algo = QLearningTicTac.QLearningTicTac(domain=domainTicTac,
                                        qinit=v,
                                        learningRate=0.1,
                                        epsilon=0.1)
-
 from tqdm import tqdm
 for i in tqdm(range(100000)):
     algo.run_learning_episode(environment=environementTicTacToe, maxSteps=10)
     environementTicTacToe = EnvironmentTicTacToe.EnvironmentTicTacToe(domainTicTac, initial_state=initialState)
 
 finalPolicy = PolicyGreedyTwoPlayer(algo)
-environementTicTacToe = EnvironmentTicTacToe.EnvironmentTicTacToe(domainTicTac, initial_state=initialState)
+SaveBrutalPolicy.save_policy(finalPolicy,
+                             set_states=algo.qvalues.keys(),
+                             output_file="policy_tic_tac.json")
+
+environementTicTacToe.initial_state = initialState
 episode = rollout(finalPolicy, environementTicTacToe)
 render_episode(episode)
 
 # Play against the IA...
-environementTicTacToe = EnvironmentTicTacToe.EnvironmentTicTacToe(domainTicTac,
-                                                                  initial_state=initialState)
+environementTicTacToe.initial_state = initialState
 player_human = 1 # You play first, or 2 : you play second
 cur_state = environementTicTacToe.current_observation()
 while not environementTicTacToe.is_terminal():

@@ -19,6 +19,9 @@ class StateTicTacToe:
         return StateTicTacToe(np.copy(self.matrix),
                               current_player=self.current_player)
 
+    def __repr__(self):
+        return self.matrix.tostring()+" "+str(self.current_player)
+
     def check_done(self):
         if 0 not in self.matrix:
             return True
