@@ -6,9 +6,7 @@ import tic_tac_toe as ttt
 env = ttt.make()
 env.reset()
 
-for play in range(200):
-    env.step(env.action_space.sample())
-    if env.done:
-        break
+env.step(3)
+env.step(5)
 
 print(env.render())
