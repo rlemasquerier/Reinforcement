@@ -34,7 +34,6 @@ class Environment:
         print(self.matrix)
 
     def check_done(self):
-
         if 0 not in self.matrix:
             self.done = True
             return True
@@ -72,7 +71,6 @@ class Environment:
     def step(self, action):
         if self.done:
             raise Exception('Terminal state, no actions possible')
-
         if self.matrix[action[0], action[1]] != 0:
             reward = -5
 
@@ -83,10 +81,13 @@ class Environment:
             self.current_player = 2 if self.current_player == 1 else 1
 
         observation = self.observation()
+
         done = self.done
         info = 0
-
         return observation, reward, done, info
+
+    def available_actions(self):
+        return ActionSpace(self.matrix).space
 
 
 def make():
