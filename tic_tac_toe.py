@@ -66,6 +66,9 @@ class Environment:
 
         return False
 
+    def observation(self):
+        return np.array([item for sublist in self.matrix.tolist() for item in sublist])
+
     def step(self, action):
         if self.done:
             raise Exception('Terminal state, no actions possible')
@@ -79,7 +82,7 @@ class Environment:
             reward = 1 if self.done and 0 in self.matrix else 0
             self.current_player = 2 if self.current_player == 1 else 1
 
-        observation = [item for sublist in self.matrix.tolist() for item in sublist]
+        observation = self.observation()
         done = self.done
         info = 0
 
