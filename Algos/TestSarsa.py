@@ -2,7 +2,7 @@ import DomainTicTacToe
 import StateTicTacToe
 import EnvironmentTicTacToe
 import QLearning
-import QLearningTicTac
+import SarsaTicTacToe
 import SaveBrutalPolicy
 
 
@@ -54,20 +54,20 @@ environementTicTacToe = EnvironmentTicTacToe.EnvironmentTicTacToe(domainTicTac, 
 def v(s, a):
     return 2.
 
-algo = QLearningTicTac.QLearningTicTac(domain=domainTicTac,
-                                       gamma=1.,
-                                       qinit=v,
-                                       learningRate=0.1,
-                                       epsilon=0.1)
+algo = SarsaTicTacToe.SarsaTicTac(domain=domainTicTac,
+                                  gamma=1.,
+                                  qinit=v,
+                                  learningRate=0.1,
+                                  epsilon=0.1)
 from tqdm import tqdm
 for i in tqdm(range(100000)):
     algo.run_learning_episode(environment=environementTicTacToe, maxSteps=10)
     environementTicTacToe = EnvironmentTicTacToe.EnvironmentTicTacToe(domainTicTac, initial_state=initialState)
 
 finalPolicy = PolicyGreedyTwoPlayer(algo)
-#SaveBrutalPolicy.save_policy(finalPolicy,
-#                             set_states=algo.qvalues.keys(),
-#                             output_file="policy_tic_tac.json")
+SaveBrutalPolicy.save_policy(finalPolicy,
+                             set_states=algo.qvalues.keys(),
+                             output_file="policy_tic_tac_sarsa.json")
 
 environementTicTacToe.initial_state = initialState
 episode = rollout(finalPolicy, environementTicTacToe)

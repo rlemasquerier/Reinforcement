@@ -1,51 +1,7 @@
+import QLearning
 from collections import defaultdict
-import random
 
-class QProvider:
-    def q_values(self, state):
-        raise NotImplementedError("You should implement !")
-
-
-class PolicyQValue(QProvider):
-    def action(self, state):
-        raise NotImplementedError("You should implement !")
-
-
-class PolicyGreedy(PolicyQValue):
-    def __init__(self, algo):
-        self.algo = algo
-
-    def action(self, state):
-        qvalues = self.algo.q_values(state)
-        if len(qvalues) > 0:
-            return max(qvalues, key=lambda x: qvalues[x])
-        else:
-            return None
-
-
-class PolicyGreedyEpsilon(PolicyQValue):
-    def __init__(self, domain, epsilon=0.1):
-        self.epsilon = epsilon
-        self.domain = domain
-
-    def action(self, state):
-        d = random.random()
-        if d < self.epsilon:
-            acs = self.domain.available_actions(state)
-            if len(acs) > 0:
-                return random.choice(tuple(acs))
-            return None
-        qvalues = self.q_values(state)
-        if len(qvalues) > 0:
-            if state.current_player == 1:
-                return max(qvalues, key=lambda x: qvalues[x])
-            else:
-                return min(qvalues, key=lambda x: qvalues[x])
-        else:
-            return None
-
-
-class QLearning(PolicyGreedyEpsilon):
+class Sarsa(QLearning.PolicyGreedyEpsilon):
     def __init__(self, domain, gamma,
                  qinit, learningRate, epsilon):
         self.domain = domain
@@ -75,9 +31,10 @@ class QLearning(PolicyGreedyEpsilon):
             a = self.action(cur_state)
             eo = environment.execute_action(a) # state, reward, done, info
             episode += [eo]
-            max_q = self.value(eo[0])
+            a_next = self.action(eo[0])
+            q_next = 0. if a_next is None else self.q_values(eo[0])[a_next]
             old_q = self.stored_Q(cur_state, a)
-            old_q += self.learningRate * (eo[1] + self.gamma * max_q - old_q)
+            old_q += self.learningRate * (eo[1] + self.gamma * q_next - old_q)
             self.qvalues[cur_state][a] = old_q
             cur_state = eo[0]
             steps += 1
@@ -99,4 +56,3 @@ class QLearning(PolicyGreedyEpsilon):
 
     def stored_Q(self, state, action):
         return self.q_values(state)[action]
-
