@@ -6,11 +6,11 @@ import QLearning
 import json
 import random
 
-
 initialState = StateTicTacToe.StateTicTacToe()
 domainTicTac = DomainTicTacToe.DomainTicTacToe()
 environementTicTacToe = EnvironmentTicTacToe.EnvironmentTicTacToe(domainTicTac, initial_state=initialState)
-policyDict = json.load(open('policy_tic_tac_sarsa.json', 'r'))
+policySarsa = json.load(open('policy_tic_tac_sarsa_2.json', 'r'))
+policyQLearning = json.load(open('policy_tic_tac_2.json', 'r'))
 
 
 class PolicyTicTacFromDict(QLearning.PolicyQValue):
@@ -25,37 +25,42 @@ class PolicyTicTacFromDict(QLearning.PolicyQValue):
             ac = b.space
             return random.choice(tuple(ac))
 
-
-finalPolicy = PolicyTicTacFromDict(policyDict)
-player_human = 1 # You play first, or 2 : you play second
-nb_games = 2
+sarsa = PolicyTicTacFromDict(policySarsa)
+qlearning = PolicyTicTacFromDict(policyQLearning)
+nb_games = 10000
+winner = {"sarsa":0, "qlearning":0}
 for j in range(nb_games):
+    player_sarsa = 2
+    player_qlearning = 1
+    if j > nb_games/2:
+        player_qlearning=2
+        player_sarsa=1
     environementTicTacToe.initial_state = initialState
     cur_state = environementTicTacToe.current_observation()
+    first_move=True
+    print cur_state
     while not environementTicTacToe.is_terminal():
-        if player_human == cur_state.current_player:
-            print "It's your turn... Current table :"
-            print cur_state.matrix
-            print "Choose : "
-            ac = list(environementTicTacToe.domain.available_actions(cur_state))
-            for i in range(len(ac)):
-                print "i : ", i, " : ", ac[i]
-            choice = raw_input()
-            try:
-                choice = int(choice)
-                if choice >= len(ac):
-                    print "Noob"
-                    choice=0
-            except ValueError:
-                print "Noobie !!"
-                choice=0
-            action = ac[choice]
+        if first_move:
+            ac = domainTicTac.available_actions(cur_state)
+            action = random.choice(tuple(ac))
+            first_move = False
+        elif player_sarsa == cur_state.current_player:
+            action = sarsa.action(cur_state)
         else:
-            action = finalPolicy.action(cur_state)
+            action = qlearning.action(cur_state)
         cur_state, reward, done, info = environementTicTacToe.execute_action(action)
         if done:
             print "Game finished ", info
             print cur_state.matrix
+            if info != "":
+                print "Sarsa won" if player_qlearning == cur_state.current_player else "QLearning Won"
+                if player_qlearning == cur_state.current_player:
+                    winner['sarsa'] += 1
+                else:
+                    winner['qlearning'] += 1
+            else:
+                print "Draw "
+    print winner
 
 
 
