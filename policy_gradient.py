@@ -11,6 +11,7 @@ import tensorflow as tf
 from tensorflow.contrib.layers import fully_connected
 from datetime import datetime
 
+# Path and date variables setup for tensorboard logs
 now = datetime.utcnow().strftime('%Y%m%d%H%M%S')
 root_logdir = 'tf_logs'
 logdir = '{}/run-{}/'.format(root_logdir, now)
@@ -54,15 +55,15 @@ for grad, variable in grads_and_vars:
 training_op = optimizer.apply_gradients(grads_and_vars_feed)
 
 # End of the construction phase
-names = [n.name for n in tf.get_default_graph().as_graph_def().node]
-print(names)
+names = [n.name for n in tf.get_default_graph().as_graph_def().node]  # Names of all nodes
 init = tf.global_variables_initializer()
-# To do : we don't need to save all variables
+# Initialize a saver to restore a session
 saver = tf.train.Saver()
-# available_outputs_summary = tf.summary.tensor_summary(name='Probability of move', tensor=available_outputs)
+# Initialize a summary and a file writer for tensorboard visualization
+cross_entropy_summary = tf.summary.scalar(name='Cross Entropy Value', tensor=tf.reduce_sum(cross_entropy))
 file_writer = tf.summary.FileWriter(logdir, tf.get_default_graph())
 
-n_iterations = 350
+n_iterations = 250
 n_games_per_updates = 100  # Number of games before updating the policy
 n_max_steps = 100          # Max steps per episode
 discount_rate = 0.95       #
@@ -72,11 +73,12 @@ env = ttt.make_simulation()
 
 with tf.Session() as sess:
     init.run()
-    saver.restore(sess, './policy_net_pg_improved.ckpt')
+    # U
+    # saver.restore(sess, './policy_net_pg.ckpt')
     for iteration in range(n_iterations):
         all_rewards = []
         all_gradients = []
-        env = ttt.make_simulation(opponent='model', begin=bool(iteration % 2))
+        env = ttt.make_simulation(opponent='random', begin=bool(iteration % 2))
         for game in range(n_games_per_updates):
             current_rewards = []
             current_gradients = []
@@ -84,8 +86,6 @@ with tf.Session() as sess:
             for step in range(n_max_steps):
                 obs = obs.reshape(1, n_inputs)
                 action_val, gradients_val = sess.run([action, gradients], feed_dict={X: obs})
-                # summary_str = available_outputs_summary.eval(feed_dict={X: obs})
-                # file_writer.add_summary(summary_str, iteration)
                 obs, reward, done, info = env.step(int(action_val))
                 current_rewards.append(reward)
                 current_gradients.append(gradients_val)
@@ -105,8 +105,13 @@ with tf.Session() as sess:
             feed_dict[grad_placeholder] = mean_gradients
         sess.run(training_op, feed_dict=feed_dict)
         if iteration % save_iterations == 0:
+            # Write a summary data point
+            summary_str = cross_entropy_summary.eval(feed_dict={X: np.array([1, -1, 0, -1, 1, 0, 0, 0, 0]).reshape(1,9)})
+            file_writer.add_summary(summary_str, iteration)
+            # Print current iteration
             print(iteration)
-            saver.save(sess, './policy_net_pg_improved.ckpt')
+            # Save a session checkpoint. Warning : erasing the previous one
+            saver.save(sess, './tf_checkpoints/policy_net_pg_improved.ckpt')
 
-    #Close the file writer
+    # Close the file writer
     file_writer.close()

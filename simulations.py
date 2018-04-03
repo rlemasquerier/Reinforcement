@@ -1,6 +1,6 @@
 """
 
-Simulations to evaluate model quality
+Simulations to evaluate the last trained model quality after a training process
 
 """
 
@@ -54,7 +54,7 @@ init = tf.global_variables_initializer()
 # To do : we don't need to save all variables
 saver = tf.train.Saver()
 
-env = ttt.make_simulation(begin=True)
+env = ttt.make_simulation(opponent='random', begin=False)
 obs = env.reset()
 
 win, tie, lose = 0, 0, 0

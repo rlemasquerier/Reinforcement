@@ -1,9 +1,14 @@
 """
 
+Main file to play a Tic-Tac-Toe game against an opponent
+Current available opponents :
+   - random
+   - policy_gradient
+
 """
 import tic_tac_toe as ttt
 
-env = ttt.make_simulation(opponent='model', begin=False)
+env = ttt.make_simulation(opponent='policy_gradient', begin=False)
 obs = env.reset()
 
 rewards = []

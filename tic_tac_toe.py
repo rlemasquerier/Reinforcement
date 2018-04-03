@@ -4,7 +4,10 @@
 
 import numpy as np
 import random
-import trained_player
+import player
+
+
+POLICY_GRADIENT_MODEL_PATH = 'saved_models/frozen_model_1.pb'
 
 
 def _to_action_space(integer_action):
@@ -113,6 +116,9 @@ class EnvironmentSimulation(Environment):
         Environment.__init__(self)
         self.opponent = opponent
         self.begin = begin
+        self.player = player.Player()
+        if opponent == 'policy_gradient':
+            self.player.initialize_model(POLICY_GRADIENT_MODEL_PATH)
 
     def reset(self):
         Environment.reset(self)
@@ -132,9 +138,9 @@ class EnvironmentSimulation(Environment):
             return observation, reward, done, info
 
         if self.opponent == 'random':
-            action = self.action_space.sample()
-        elif self.opponent == 'model':
-            action = trained_player.play(observation)
+            action = self.player.play(observation)
+        elif self.opponent == 'policy_gradient':
+            action = self.player.play(observation)
         else:
             raise Exception('opponent mode not correct')
 
