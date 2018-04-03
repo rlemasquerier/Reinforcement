@@ -9,33 +9,42 @@ import numpy as np
 from policy_gradient_functions import discount_and_normalize_rewards
 import tensorflow as tf
 from tensorflow.contrib.layers import fully_connected
+from datetime import datetime
+
+now = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+root_logdir = 'tf_logs'
+logdir = '{}/run-{}/'.format(root_logdir, now)
 
 # Specify the neural network architecture
 n_inputs = 9
 n_hidden = 18
 n_outputs = 9
 initializer = tf.contrib.layers.variance_scaling_initializer()
-learning_rate = 0.01
+learning_rate = 0.001
 
 # Build the neural network
 X = tf.placeholder(tf.float32, shape=[None, n_inputs], name='X')
 hidden = fully_connected(X, n_hidden, activation_fn=tf.nn.elu, weights_initializer=initializer)
-logits = fully_connected(hidden, n_outputs, activation_fn=None, weights_initializer=initializer)
-outputs = tf.nn.softmax(logits)
+hidden2 = fully_connected(hidden, n_hidden, activation_fn=tf.nn.elu, weights_initializer=initializer)
+logits = fully_connected(hidden2, n_outputs, activation_fn=None, weights_initializer=initializer)
+
+possible_moves_mask = tf.ones(shape=[1, n_outputs], dtype=tf.float32) - tf.abs(X)
+temp = tf.multiply(possible_moves_mask, tf.exp(logits))
+outputs = 1/tf.reduce_sum(temp)*temp
 
 # Select a random action based on the probability
 action = tf.multinomial(tf.log(outputs), num_samples=1)
 
 # Define the target if the action chosen was correct and the cost function
-y = np.zeros(n_outputs)
 y = tf.reshape(tf.one_hot(depth=n_outputs, indices=action), [1, n_outputs])
-
 cross_entropy = tf.nn.sigmoid_cross_entropy_with_logits(labels=y, logits=logits)
 
 # Define gradients
 optimizer = tf.train.AdamOptimizer(learning_rate)
 grads_and_vars = optimizer.compute_gradients(cross_entropy)
 gradients = [grad for grad, variable in grads_and_vars]
+variables_names = [v.name for v in tf.trainable_variables()]
+
 gradient_placeholders = []
 grads_and_vars_feed = []
 for grad, variable in grads_and_vars:
@@ -44,29 +53,40 @@ for grad, variable in grads_and_vars:
     grads_and_vars_feed.append((gradient_placeholder, variable))
 training_op = optimizer.apply_gradients(grads_and_vars_feed)
 
+# End of the construction phase
+names = [n.name for n in tf.get_default_graph().as_graph_def().node]
+print(names)
 init = tf.global_variables_initializer()
+# To do : we don't need to save all variables
 saver = tf.train.Saver()
+# available_outputs_summary = tf.summary.tensor_summary(name='Probability of move', tensor=available_outputs)
+file_writer = tf.summary.FileWriter(logdir, tf.get_default_graph())
 
-n_iterations = 250
-n_games_per_updates = 10  # Number of games before updating the policy
-n_max_steps = 100         # Max steps per episode
-discount_rate = 0.9       #
+n_iterations = 350
+n_games_per_updates = 100  # Number of games before updating the policy
+n_max_steps = 100          # Max steps per episode
+discount_rate = 0.95       #
 save_iterations = 10
 
-env = ttt.make()
+env = ttt.make_simulation()
 
 with tf.Session() as sess:
     init.run()
+    saver.restore(sess, './policy_net_pg_improved.ckpt')
     for iteration in range(n_iterations):
         all_rewards = []
         all_gradients = []
+        env = ttt.make_simulation(opponent='model', begin=bool(iteration % 2))
         for game in range(n_games_per_updates):
             current_rewards = []
             current_gradients = []
             obs = env.reset()
             for step in range(n_max_steps):
-                action_val, gradients_val = sess.run([action, gradients], feed_dict={X: obs.reshape(1, n_inputs)})
-                obs, reward, done, info = env.step(int(action_val[0][0]))
+                obs = obs.reshape(1, n_inputs)
+                action_val, gradients_val = sess.run([action, gradients], feed_dict={X: obs})
+                # summary_str = available_outputs_summary.eval(feed_dict={X: obs})
+                # file_writer.add_summary(summary_str, iteration)
+                obs, reward, done, info = env.step(int(action_val))
                 current_rewards.append(reward)
                 current_gradients.append(gradients_val)
                 if done:
@@ -85,14 +105,8 @@ with tf.Session() as sess:
             feed_dict[grad_placeholder] = mean_gradients
         sess.run(training_op, feed_dict=feed_dict)
         if iteration % save_iterations == 0:
-            saver.save(sess, './policy_net_pg.ckpt')
+            print(iteration)
+            saver.save(sess, './policy_net_pg_improved.ckpt')
 
-# env = ttt.make()
-# obs = env.reset()
-#
-# with tf.Session() as sess:
-#     saver.restore(sess, './policy_net_pg.ckpt')
-#     for step in range(100):
-#         action_val = sess.run(action, feed_dict={X: obs.reshape(1, n_inputs)})
-#         obs, _, _, _ = env.step(int(action_val[0][0]))
-#         env.render()
+    #Close the file writer
+    file_writer.close()
