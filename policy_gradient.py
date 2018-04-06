@@ -29,7 +29,9 @@ hidden = fully_connected(X, n_hidden, activation_fn=tf.nn.elu, weights_initializ
 hidden2 = fully_connected(hidden, n_hidden, activation_fn=tf.nn.elu, weights_initializer=initializer)
 logits = fully_connected(hidden2, n_outputs, activation_fn=None, weights_initializer=initializer)
 
+# We are going to filter the output according to possible moves
 possible_moves_mask = tf.ones(shape=[1, n_outputs], dtype=tf.float32) - tf.abs(X)
+# According to this mask, compute a "custom softmax" to transform logits to probability of moves IN POSSIBLE SPOTS
 temp = tf.multiply(possible_moves_mask, tf.exp(logits))
 outputs = 1/tf.reduce_sum(temp)*temp
 
@@ -49,6 +51,7 @@ variables_names = [v.name for v in tf.trainable_variables()]
 gradient_placeholders = []
 grads_and_vars_feed = []
 for grad, variable in grads_and_vars:
+    # One placeholder per gradient : we arge going to modify it according to game result
     gradient_placeholder = tf.placeholder(tf.float32, shape=grad.get_shape())
     gradient_placeholders.append(gradient_placeholder)
     grads_and_vars_feed.append((gradient_placeholder, variable))
@@ -73,7 +76,7 @@ env = ttt.make_simulation()
 
 with tf.Session() as sess:
     init.run()
-    # U
+    # In case we need to restore a previous pre-trained session
     # saver.restore(sess, './policy_net_pg.ckpt')
     for iteration in range(n_iterations):
         all_rewards = []
@@ -106,7 +109,9 @@ with tf.Session() as sess:
         sess.run(training_op, feed_dict=feed_dict)
         if iteration % save_iterations == 0:
             # Write a summary data point
-            summary_str = cross_entropy_summary.eval(feed_dict={X: np.array([1, -1, 0, -1, 1, 0, 0, 0, 0]).reshape(1,9)})
+            summary_str = cross_entropy_summary.eval(feed_dict={
+                X: np.array([1, -1, 0, -1, 1, 0, 0, 0, 0]).reshape(1, 9)
+            })
             file_writer.add_summary(summary_str, iteration)
             # Print current iteration
             print(iteration)
